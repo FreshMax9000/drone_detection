@@ -151,6 +151,21 @@ def get_meta(meta_path: str):
 def get_detections(net, meta, file: str) -> list:
     return detect(net, meta, c_char_p(file.encode("utf-8")))
 
+
+class Net:
+
+    def __init__(
+        self,
+        weights_path: str,
+        config_path: str,
+        meta_path: str
+    ) -> None:
+        self._net = get_net(config_path, weights_path)
+        self._meta = get_meta(meta_path)
+
+    def eval(self, picture_path: str):
+        return get_detections(self._net, self._meta, picture_path)
+
     
 if __name__ == "__main__":
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
