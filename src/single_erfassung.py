@@ -31,6 +31,19 @@ class GetImageThread(threading.Thread):
       *,
       daemon: bool = None
       ) -> None:
+      """Intialize GetImageThread object.
+
+      Args:
+          esp_url (str): URL to ESP, eg 'http://192.168.188.80/capture'
+          esp_name (str): Name of the ESP this Thread is responsible for
+          pos (np.array): 3d position of this threads esp
+          group (None, optional): [description]. Defaults to None.
+          target (Callable, optional): [description]. Defaults to None.
+          name (str, optional): [description]. Defaults to None.
+          args (Iterable, optional): [description]. Defaults to ().
+          kwargs (Mapping, optional): [description]. Defaults to {}.
+          daemon (bool, optional): [description]. Defaults to None.
+      """
       if name is None:
          name = f"{esp_name}-Thread"
       super().__init__(group=group, target=target, name=name, args=args, kwargs=kwargs, daemon=daemon)
@@ -56,8 +69,19 @@ class GetImageThread(threading.Thread):
 
 
 class ThreadController:
+   """Class to control threads getting pictures from the esp32s.
+   """
 
    def __init__(self, esp32_url_list: list, esp32_pos_list: list, esp32_name_list: list = None):
+      """Initialize ThreadController objekct
+
+      Args:
+          esp32_url_list (list): List of URLs to access the image data of the esp32s
+          esp32_pos_list (list): List of positions of the esp32s. Preferably in the same
+            order as esp32_url_list
+          esp32_name_list (list, optional): List of names for the esp32s. Preferably in the same
+            order as esp32_url_list. Defaults to None.
+      """
       self.threads = []
       for i, url in enumerate(esp32_url_list):
          if esp32_name_list is None:
@@ -69,7 +93,14 @@ class ThreadController:
       for thread in self.threads:
          thread.start()
 
-   def get_image_dict(self):
+   def get_image_dict(self) -> dict:
+      """Retrievies the most up-to-date pictures of the esp32s and returns them in a dict.
+
+      Returns:
+          dict: A dict mapping the names of the esp32s to ImageData objects. Usually looks somewhat like this:
+            {"esp1": image_data_obj_1,
+            "esp": image_data_obj_2}
+      """
       GetImageThread.image_dict_lock.acquire(blocking=True)
       #print(f"Lock acquired by: ThreadController.get_image_dict()")
       image_dict = copy.copy(GetImageThread.image_dict)

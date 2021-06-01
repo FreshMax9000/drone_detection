@@ -35,6 +35,7 @@ def main():
                 print(raw_spot)
             tmp_time = time.time() - tmp_time
             print(f"Analying and printing the detections took {tmp_time}s")
+            # todo further processing
 
 
 

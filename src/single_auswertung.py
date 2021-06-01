@@ -51,8 +51,14 @@ class Spot:
 
 
 class BildAuswertung:
+    """Class to run YOLO on single images and extract possible drone spottings from them.
+    """
 
     def __init__(self):
+        """Initializes a BildAuswertung object.
+
+        This usually includes initializing a Net (darknet) object with yolo data, which takes a while (~2s).
+        """
         self.darknet = Net("/home/max/darknet_test/darknet/libdarknet.so",
                            "/home/max/darknet_test/darknet/yolov3.weights",
                            "/home/max/darknet_test/darknet/cfg/yolov3.cfg",
@@ -62,13 +68,25 @@ class BildAuswertung:
         raw_spot.spotted_list.extend(self.darknet.detect(img))
 
     def get_spotted(self, image_dict: dict) -> list:
+        """Generates a list of Spot objects from the given image_dict.
+
+        All Images in image_dict are searched for drone objects. Each found drone object is
+        described by a Spot object. A list containing all found Spots is then returned
+
+        Args:
+            image_dict (dict): A dict containing ImageData objects
+
+        Returns:
+            list: A list containing Spot objects, which correspond the found drones in
+                the given images.
+        """
         raw_spot_list = []
         for key in image_dict:
             raw_spot = RawSpot(image_dict[key].esp_name, image_dict[key].pos, image_dict[key].timestamp)
             self.fill_raw_spot(raw_spot, image_dict[key].image)
             raw_spot_list.append(raw_spot)
         return raw_spot_list
-        # Generate Spot from rawSpot using the maximum width of the orig img and stuff
+        # todo Generate Spot from rawSpot using the maximum width of the orig img and stuff
 
     #def get_spotted(self):
     #    return self.get_spotted_dummy()
