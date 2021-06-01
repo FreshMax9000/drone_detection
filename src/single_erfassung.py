@@ -6,9 +6,10 @@ from typing import Callable, Iterable, Mapping
 import copy
 
 import cv2
+import numpy as np
 from skimage import io
 
-from image_data import ImageData
+from .image_data import ImageData
 
 
 class GetImageThread(threading.Thread):
@@ -21,6 +22,7 @@ class GetImageThread(threading.Thread):
       self,
       esp_url: str,
       esp_name: str,
+      pos: np.array,
       group: None = None,
       target: Callable = None,
       name: str = None,
@@ -34,6 +36,7 @@ class GetImageThread(threading.Thread):
       super().__init__(group=group, target=target, name=name, args=args, kwargs=kwargs, daemon=daemon)
       self.esp_url = esp_url
       self.esp_name = esp_name
+      self.pos = pos
 
    def _get_frame(self):
       img = io.imread(self.esp_url)
@@ -42,9 +45,9 @@ class GetImageThread(threading.Thread):
    def run(self):
       while not self.exit:
          img = self._get_frame()
-         img_data = ImageData(img, time.time(), self.esp_name)
+         img_data = ImageData(img, time.time(), self.esp_name, self.pos)
          self.image_dict_lock.acquire(blocking=True)
-         print(f"Lock acquired by: {self.name}")
+         #print(f"Lock acquired by: {self.name}")
          self.image_dict.update({self.esp_name: img_data})
          self.image_dict_lock.release()
 
@@ -54,13 +57,13 @@ class GetImageThread(threading.Thread):
 
 class ThreadController:
 
-   def __init__(self, esp32_url_list: list, esp32_name_list: list = None):
+   def __init__(self, esp32_url_list: list, esp32_pos_list: list, esp32_name_list: list = None):
       self.threads = []
       for i, url in enumerate(esp32_url_list):
          if esp32_name_list is None:
-            self.threads.append(GetImageThread(url, f"ESP{i}"))
+            self.threads.append(GetImageThread(url, f"ESP{i}", esp32_pos_list[i]))
          else:
-            self.threads.append(GetImageThread(url, esp32_name_list[i]))
+            self.threads.append(GetImageThread(url, esp32_name_list[i], esp32_pos_list[i]))
 
    def start_threads(self):
       for thread in self.threads:
@@ -68,7 +71,7 @@ class ThreadController:
 
    def get_image_dict(self):
       GetImageThread.image_dict_lock.acquire(blocking=True)
-      print(f"Lock acquired by: ThreadController.get_image_dict()")
+      #print(f"Lock acquired by: ThreadController.get_image_dict()")
       image_dict = copy.copy(GetImageThread.image_dict)
       GetImageThread.image_dict_lock.release()
       return image_dict
