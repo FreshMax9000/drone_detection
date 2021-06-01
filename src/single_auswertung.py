@@ -1,6 +1,22 @@
 import time
+from threading import Thread
 
 import numpy as np
+
+from .darknet import Net
+from .image_data import ImageData
+
+
+class RawSpot:
+
+    def __init__(self, camera_name: str, base_pos: np.array, single_time: time.time) -> None:
+        self.camera_name = camera_name
+        self.base_pos = base_pos
+        self.single_time = single_time
+        self.spotted_list = []
+
+    def __str__(self):
+        return f"{self.camera_name}: {self.spotted_list}"
 
 
 class Spot:
@@ -37,10 +53,25 @@ class Spot:
 class BildAuswertung:
 
     def __init__(self):
-        pass
+        self.darknet = Net("/home/max/darknet_test/darknet/libdarknet.so",
+                           "/home/max/darknet_test/darknet/yolov3.weights",
+                           "/home/max/darknet_test/darknet/cfg/yolov3.cfg",
+                           "/home/max/darknet_test/darknet/cfg/coco.data")
 
-    def get_spotted(self):
-        return self.get_spotted_dummy()
+    def fill_raw_spot(self, raw_spot: RawSpot, img) -> None:
+        raw_spot.spotted_list.extend(self.darknet.detect(img))
+
+    def get_spotted(self, image_dict: dict) -> list:
+        raw_spot_list = []
+        for key in image_dict:
+            raw_spot = RawSpot(image_dict[key].esp_name, image_dict[key].pos, image_dict[key].timestamp)
+            self.fill_raw_spot(raw_spot, image_dict[key].image)
+            raw_spot_list.append(raw_spot)
+        return raw_spot_list
+        # Generate Spot from rawSpot using the maximum width of the orig img and stuff
+
+    #def get_spotted(self):
+    #    return self.get_spotted_dummy()
 
     def get_spotted_dummy(self):
         e1 = Spot(
