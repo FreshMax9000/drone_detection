@@ -7,7 +7,7 @@ class ImageData:
 
     folder_path = "/home/max/Documents/Studienarbeit/DroneSpot/implementation_kek/a_lot_of_images"
 
-    def __init__(self, image, timestamp: float, esp_name: str, pos: np.array) -> None:
+    def __init__(self, image, timestamp: float, esp_name: str, pos: np.ndarray) -> None:
         self.image = image
         self.timestamp = timestamp
         self.esp_name = esp_name
