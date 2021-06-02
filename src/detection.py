@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from single_auswertung import Spot, BildAuswertung
+from .single_auswertung import Spot, BildAuswertung
 
 
 class DetectionMaker:
