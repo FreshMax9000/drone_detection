@@ -2,7 +2,7 @@
 
 import threading
 import time
-from typing import Callable, Iterable, Mapping
+from typing import Callable, Iterable, Mapping, Tuple, Dict
 import copy
 
 import cv2
@@ -93,19 +93,22 @@ class ThreadController:
       for thread in self.threads:
          thread.start()
 
-   def get_image_dict(self) -> dict:
-      """Retrievies the most up-to-date pictures of the esp32s and returns them in a dict.
+   def get_image_dict(self) -> Tuple[Dict[str, ImageData], float]:
+      """Retrievies the most up-to-date pictures of the esp32s and returns them in a dict with a timestamp.
 
       Returns:
-          dict: A dict mapping the names of the esp32s to ImageData objects. Usually looks somewhat like this:
+          tuple:
+            dict: A dict mapping the names of the esp32s to ImageData objects. Usually looks somewhat like this:
             {"esp1": image_data_obj_1,
             "esp": image_data_obj_2}
+         float: Timestamp when the images have been acquired from the ESPs
       """
       GetImageThread.image_dict_lock.acquire(blocking=True)
       #print(f"Lock acquired by: ThreadController.get_image_dict()")
+      glob_time = time.time()
       image_dict = copy.copy(GetImageThread.image_dict)
       GetImageThread.image_dict_lock.release()
-      return image_dict
+      return image_dict, glob_time
 
    def stop_all_threads(self):
       GetImageThread.exit = True
