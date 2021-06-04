@@ -24,17 +24,18 @@ def main():
     auswertung = BildAuswertung()
 
     with ThreadController(ESP_32_URL_LIST, ESP_32_POS_LIST, esp32_name_list=ESP_32_NAME_LIST) as img_threads:
+        print("Detection running !")
         start_time = time.time()
-        while time.time() - start_time < 120:
+        while time.time() - start_time < 300:
             tmp_time = time.time()
-            image_dict = img_threads.get_image_dict()
+            image_dict, timestamp = img_threads.get_image_dict()
             tmp_time = time.time() - tmp_time
-            print(f"Getting picture dict took {tmp_time}s")
+            #print(f"Getting picture dict took {tmp_time}s")
             tmp_time = time.time()
-            for raw_spot in auswertung.get_spotted(image_dict):
-                print(raw_spot)
+            for spot in auswertung.get_spotted(image_dict):
+                print(spot)
             tmp_time = time.time() - tmp_time
-            print(f"Analying and printing the detections took {tmp_time}s")
+            #print(f"Analying and printing the detections took {tmp_time}s")
             # todo further processing
 
 
