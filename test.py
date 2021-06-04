@@ -41,8 +41,14 @@ def test_detection():
     detector = DetectionMaker(0.5)
     print(detector.make_detection2(d_spot_list, d_timestamp))
 
+def dummdumm():
+    some_list = ['a', 'b', 'c', 'd']
+    print(some_list[1:])
+
 
 def main():
+    #dummdumm()
+    #return
     test_detection()
     return
 

@@ -83,7 +83,7 @@ class BildAuswertung:
             spotted_list = self.darknet.detect(image_dict[key].image)
             # Iterate over found images      
             for raw_spot in spotted_list:
-                if raw_spot[0] in [b"airplane", b"drone"] or True: # todo possibly extend todo remove teutology
+                if raw_spot[0] in [b"airplane", b"drone", b"scissors"]: # todo possibly extend todo remove teutology
                     height, width, _ = np.shape(image_dict[key].image)
                     base_pos = image_dict[key].pos
                     single_time = image_dict[key].timestamp
