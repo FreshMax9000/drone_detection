@@ -2,8 +2,10 @@ import logging
 import time
 import math
 from typing import List
+from itertools import combinations
 
 import numpy as np
+from numpy.lib import average
 
 from .single_auswertung import Spot, BildAuswertung
 
@@ -74,6 +76,27 @@ class DetectionMaker:
     def get_3d_to_2d_trans(self, spot_1: Spot, spot_2: Spot):
         return np.array([spot_1.drone_vec, spot_2.drone_vec])
 
+    def merge_detections(self, detection_list: List[np.ndarray]) -> List[np.ndarray]:
+        #for detec1, detec2 in combinations(detection_list, 2):
+
+        #print(detection_list)
+        if len(detection_list) < 2:
+            return detection_list
+        filtered_detections = self.merge_detections(detection_list[1:])
+        similiar_index = []
+        for i, detection in enumerate(filtered_detections):
+            if np.linalg.norm(detection_list[0] - detection) < self.distance_threshold:
+                similiar_index.append(i)
+        similiar_values = [detec for i, detec in enumerate(filtered_detections) if i in similiar_index]
+        similiar_values.append(detection_list[0])
+        detection_list[0] = np.mean(similiar_values, axis=0)
+        #detections = [
+        #    detection for detection in filtered_detections if (detection not in similiar_values)
+        #    ]
+        detections = [detec for i, detec in enumerate(filtered_detections) if i not in similiar_index]
+        detections.append(detection_list[0])
+        return detections
+
     def make_detection2(self, spot_list: List[Spot], spot_time: float) -> List[np.ndarray]:
         """Bestimmt die Lokation von möglichen Drohnen anhand von den von BildAuswertung gegebenen Daten"""
         detection_list = []
@@ -112,7 +135,11 @@ class DetectionMaker:
         # Für Alle Schnittpunkte mit jedem Schnittpunkt
         #   Wenn anderer Schnittpunkt sehr nahe an eigenem Schnittpunkt:
         #       Zusammenführen
+        detection_list = self.merge_detections(detection_list)
         return detection_list
+
+    def make_detection(self, spot_list: List[Spot], spot_time: float) -> List[np.ndarray]:
+        return self.make_detection2(spot_list, spot_time)
 
 
 
