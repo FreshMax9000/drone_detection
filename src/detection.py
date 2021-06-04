@@ -1,6 +1,7 @@
 import logging
 import time
 import math
+from typing import List
 
 import numpy as np
 
@@ -9,8 +10,8 @@ from .single_auswertung import Spot, BildAuswertung
 
 class DetectionMaker:
 
-    def __init__(self):
-        self.auswertung = BildAuswertung()
+    def __init__(self, distance_threshold: float):
+        self.distance_threshold = distance_threshold
         logging.debug(f"{self.__class__} initialisiert")
 
     def _get_ebene(self, drone_vec: np.ndarray):
@@ -73,12 +74,11 @@ class DetectionMaker:
     def get_3d_to_2d_trans(self, spot_1: Spot, spot_2: Spot):
         return np.array([spot_1.drone_vec, spot_2.drone_vec])
 
-    def make_detection2(self):
+    def make_detection2(self, spot_list: List[Spot], spot_time: float) -> List[np.ndarray]:
         """Bestimmt die Lokation von möglichen Drohnen anhand von den von BildAuswertung gegebenen Daten"""
         detection_list = []
-        spotted_list, spot_time = self.auswertung.get_spotted()
-        for i, spot_1 in enumerate(spotted_list):
-            for spot_2 in spotted_list[i+1:]:
+        for i, spot_1 in enumerate(spot_list):
+            for spot_2 in spot_list[i+1:]:
                 # Bestimme Ebene (Also Transformation)
                 #   Ebene geht durch Ursprung und wird durch den drone_vec der beiden zu prüfenden
                 #   Spots aufgespannt
@@ -91,21 +91,27 @@ class DetectionMaker:
                 # Geradengleichung in der Ebene für beide Spots aufstellen
                 # Geradengleichung gleichstellen und lösen -> s_1, s_2
                 b = spot_2_2d.base_pos - spot_1_2d.base_pos
-                a = np.array([spot_1_2d.drone_vec, -spot_2_2d.drone_vec]).T
-                s_1, s_2 = np.linalg.solve(a, b)
+                a = np.array([spot_1_2d.raw_drone_vec, -spot_2_2d.raw_drone_vec]).T
+                try:
+                    s_1, s_2 = np.linalg.solve(a, b)
+                except np.linalg.LinAlgError:
+                    logging.warning("Parallel spottings")
+                    continue
                 # Mit s_1 und s_2 dreidimsensionale "Schnittpunkte" der Spots berechnen
                 #p_1 = np.dot(trans_2d_to_3d, spot_1_2d.get_point(s_1))
                 #p_2 = np.dot(trans_2d_to_3d, spot_2_2d.get_point(s_2))
                 p_1 = spot_1.get_point(s_1) # todo so richtig ??? -> weiter testen !
                 p_2 = spot_2.get_point(s_2)
-                print(p_1)
-                print(p_2)
+                #print(p_1)
+                #print(p_2)
                 # Distanz zwischen den Schnittpunkten berechnen
                 # Wenn Distanz unter bestimmten Schwellwert, Mittelpunkt zwischen Schnittpunkten in Liste eintragen
-
-                # Für Alle Schnittpunkte mit jedem Schnittpunkt
-                #   Wenn anderer Schnittpunkt sehr nahe an eigenem Schnittpunkt:
-                #       Zusammenführen
+                if np.linalg.norm(p_1 - p_2) <= self.distance_threshold:
+                    #print(f"Spotted between {spot_1.camera_name} and {spot_2.camera_name}")
+                    detection_list.append((p_1 + p_2) / 2)
+        # Für Alle Schnittpunkte mit jedem Schnittpunkt
+        #   Wenn anderer Schnittpunkt sehr nahe an eigenem Schnittpunkt:
+        #       Zusammenführen
         return detection_list
 
 
