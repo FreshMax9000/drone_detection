@@ -6,6 +6,7 @@ import numpy as np
 from src.image_data import ImageData
 from src.single_auswertung import BildAuswertung, Spot
 from src.detection import DetectionMaker
+from src.single_erfassung import ThreadController
 
 
 def get_spotted_dummy():
@@ -46,10 +47,27 @@ def dummdumm():
     print(some_list[1:])
 
 
+def get_demo_pics():
+    url_list = ["http://192.168.188.80/capture",
+                "http://192.168.188.82/capture"]
+    name_list = ["uff", "kek"]
+    controller = ThreadController(url_list, [np.array([0, 0, 0]), np.array([0, 0.06, 0])], esp32_name_list=name_list)
+    with controller as c:     
+        for i in range(2):
+            images = c.get_image_dict()[0]
+            
+            for key in images:
+                images[key].save_to_file()
+                break
+            time.sleep(2)
+
+
+
 def main():
     #dummdumm()
     #return
-    test_detection()
+    #test_detection()
+    get_demo_pics()
     return
 
     dummy_img = cv2.imread("/home/max/darknet_test/darknet/data/eagle.jpg")

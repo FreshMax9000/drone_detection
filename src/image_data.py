@@ -5,7 +5,7 @@ import numpy as np
 
 class ImageData:
 
-    folder_path = "/home/max/Documents/Studienarbeit/DroneSpot/implementation_kek/a_lot_of_images"
+    folder_path = "/home/max/Pictures/drone_demo_pics"
 
     def __init__(self, image, timestamp: float, esp_name: str, pos: np.ndarray) -> None:
         self.image = image
