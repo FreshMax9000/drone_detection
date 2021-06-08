@@ -120,6 +120,8 @@ class DetectionMaker:
                 except np.linalg.LinAlgError:
                     logging.warning("Parallel spottings")
                     continue
+                if s_1 == 0.0 and s_2 == 0.0: # Usually happens when one camera sees the same object twice
+                    continue
                 # Mit s_1 und s_2 dreidimsensionale "Schnittpunkte" der Spots berechnen
                 #p_1 = np.dot(trans_2d_to_3d, spot_1_2d.get_point(s_1))
                 #p_2 = np.dot(trans_2d_to_3d, spot_2_2d.get_point(s_2))

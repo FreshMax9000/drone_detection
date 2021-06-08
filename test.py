@@ -62,13 +62,22 @@ def get_demo_pics():
             time.sleep(2)
 
 
+def test_bildauswertung():
+    auswertung = BildAuswertung("yolov5m.pt")
+    img = cv2.imread("/home/max/Documents/drone_detection/test_images/drone_1.jpg")
+    img = cv2.imread("/home/max/darknet_test/darknet/data/dog.jpg")
+    print("---hier:---")
+    print(auswertung.detect_yolov5(img))
+
+
 
 def main():
     #dummdumm()
     #return
     #test_detection()
-    get_demo_pics()
-    return
+    #get_demo_pics()
+    #test_bildauswertung()
+    #return
 
     dummy_img = cv2.imread("/home/max/darknet_test/darknet/data/eagle.jpg")
     dummy_img_data = ImageData(dummy_img, time.time(), "some_esp", np.array([0, 0, 0]))
@@ -76,9 +85,9 @@ def main():
     cv2.imshow("dingledangle", dummy_img_data.image)
     print(cv2.waitKey(10000))
     #return
-    auswertung = BildAuswertung()
+    auswertung = BildAuswertung("yolov5m.pt")
     spotted = auswertung.get_spotted({"some_esp": dummy_img_data})
-    print(spotted[0])
+    #print(spotted[0])
 
 if __name__ == "__main__":
     main()

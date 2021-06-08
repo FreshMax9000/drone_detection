@@ -53,6 +53,7 @@ class GetImageThread(threading.Thread):
 
    def _get_frame(self):
       img = io.imread(self.esp_url)
+      img = cv2.flip(img, 0)
       return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
    def run(self):
