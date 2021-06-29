@@ -132,3 +132,7 @@ dmypy.json
 droneEnv
 training_data
 temp_pic.png
+orig_test
+orig_test_2
+scissors_test
+

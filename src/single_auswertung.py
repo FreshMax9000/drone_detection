@@ -139,7 +139,7 @@ class BildAuswertung:
                     # todo where exactly is top and bottom ?
                     geka_x = 0.5 # Gegenkathete
                     geka_y = 0.38
-                    drone_vec = np.array([((x1+x2)/(2*width) - 0.5) * geka_x, ((y1+y2)/(2*height) - 0.5) * -geka_y, 1])
+                    drone_vec = np.array([((x1+x2)/(2*width) - 0.5) * geka_x * 2, ((y1+y2)/(2*height) - 0.5) * -geka_y * 2, 1])
                     size = np.average(np.array(raw_spot[2:4])/np.array((height, width)))
                     spot = Spot(esp_name, base_pos, drone_vec, size, single_time)
                     spot_list.append(spot)
