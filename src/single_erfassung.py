@@ -1,4 +1,7 @@
-#!/usr/bin/python3
+"""This module contains the first stage of the detection pipeline.
+
+The first stage contains the ESP32-Microcontrollers and a polling mechanism delivering
+the data from the microcontrollers to the rest of the software."""
 
 import threading
 import time
@@ -13,6 +16,14 @@ from .image_data import ImageData
 
 
 class GetImageThread(threading.Thread):
+   """Thread to poll images from a single microcontroller.
+   
+   For each microcontroller one instance of this class should exist. This class is then
+   permanently polling images from the microcontroller. The images are stored in the shared
+   variable image_dict, to which access is controlled by image_dict_lock. All threads store their
+   most current images in this dictionary, which then can also be accessed by other parts of the
+   software. For accessing the shared variable see class "ThreadController".
+   """
 
    image_dict: dict = {}
    image_dict_lock: threading.Lock = threading.Lock()
@@ -33,16 +44,19 @@ class GetImageThread(threading.Thread):
       ) -> None:
       """Intialize GetImageThread object.
 
+      For further documentation on the arguments supplied to the threading.Thread parent class
+      see https://docs.python.org/3/library/threading.html#thread-objects.
+
       Args:
           esp_url (str): URL to ESP, eg 'http://192.168.188.80/capture'
           esp_name (str): Name of the ESP this Thread is responsible for
           pos (np.array): 3d position of this threads esp
-          group (None, optional): [description]. Defaults to None.
-          target (Callable, optional): [description]. Defaults to None.
-          name (str, optional): [description]. Defaults to None.
-          args (Iterable, optional): [description]. Defaults to ().
-          kwargs (Mapping, optional): [description]. Defaults to {}.
-          daemon (bool, optional): [description]. Defaults to None.
+          group (None, optional): Defaults to None.
+          target (Callable, optional): Defaults to None.
+          name (str, optional): Defaults to None.
+          args (Iterable, optional): Defaults to ().
+          kwargs (Mapping, optional): Defaults to {}.
+          daemon (bool, optional): Defaults to None.
       """
       if name is None:
          name = f"{esp_name}-Thread"
@@ -52,21 +66,18 @@ class GetImageThread(threading.Thread):
       self.pos = pos
 
    def _get_frame(self):
-      img = io.imread(self.esp_url)
-      img = cv2.flip(img, 0)
-      return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+      img = io.imread(self.esp_url) # Acquire image via http
+      img = cv2.flip(img, 0) # Vertically flip the image (top->bottom and bottom->top)
+      return cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # Set correct color
 
    def run(self):
       while not self.exit:
-         img = self._get_frame()
+         img = self._get_frame() # get single image
          img_data = ImageData(img, time.time(), self.esp_name, self.pos)
+         # Acquire lock and store image in shared variable
          self.image_dict_lock.acquire(blocking=True)
-         #print(f"Lock acquired by: {self.name}")
          self.image_dict.update({self.esp_name: img_data})
          self.image_dict_lock.release()
-
-
-
 
 
 class ThreadController:
@@ -84,6 +95,7 @@ class ThreadController:
             order as esp32_url_list. Defaults to None.
       """
       self.threads = []
+      # Generate a GetImageThread object for each microcontroller
       for i, url in enumerate(esp32_url_list):
          if esp32_name_list is None:
             self.threads.append(GetImageThread(url, f"ESP{i}", esp32_pos_list[i]))
@@ -104,8 +116,8 @@ class ThreadController:
             "esp": image_data_obj_2}
          float: Timestamp when the images have been acquired from the ESPs
       """
+      # Acquire lock and get image from shared variable
       GetImageThread.image_dict_lock.acquire(blocking=True)
-      #print(f"Lock acquired by: ThreadController.get_image_dict()")
       glob_time = time.time()
       image_dict = copy.copy(GetImageThread.image_dict)
       GetImageThread.image_dict_lock.release()

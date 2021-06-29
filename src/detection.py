@@ -1,3 +1,5 @@
+"""This file contains the 3d detection of the drones (the last stage of the system).
+"""
 import logging
 import time
 import math
@@ -13,7 +15,8 @@ from .single_auswertung import Spot, BildAuswertung
 class DetectionMaker:
 
     def __init__(self, distance_threshold: float):
-        self.distance_threshold = distance_threshold
+        self.distance_threshold = distance_threshold # when two detection are further apart than this threshhold
+                                                     # they will count as two detections
         logging.debug(f"{self.__class__} initialisiert")
 
     def _get_ebene(self, drone_vec: np.ndarray):
@@ -26,8 +29,11 @@ class DetectionMaker:
         return (vector_1, vector_2)
 
     def make_detection1(self):
-        """Bestimmt die Lokation von möglichen Drohnen anhand von den von BildAuswertung gegebenen Daten"""
-        detection_list = []
+        """Bestimmt die Lokation von möglichen Drohnen anhand von den von BildAuswertung gegebenen Daten
+        
+        Is not in use in the current system.
+        """
+        detection_list = [] # Liste von gemachten Detections im 3d Raum
         spotted_list, spot_time = self.auswertung.get_spotted()
         # Prüfe jeden gegeben Spot auf Kollision mit jedem anderen Spot
         for i, spot_1 in enumerate(spotted_list):
@@ -74,25 +80,30 @@ class DetectionMaker:
         return detection_list
 
     def get_3d_to_2d_trans(self, spot_1: Spot, spot_2: Spot):
+        """Return a matrix which can be used to project 3d vector on the given new 2d basis vectors
+        """
         return np.array([spot_1.drone_vec, spot_2.drone_vec])
 
     def merge_detections(self, detection_list: List[np.ndarray]) -> List[np.ndarray]:
-        #for detec1, detec2 in combinations(detection_list, 2):
+        """Merges detection in the detection_list which are closer together than distance_treshold.
 
-        #print(detection_list)
-        if len(detection_list) < 2:
+        This function is recursive and could also be improved.
+        """
+        if len(detection_list) < 2: # Stop recursion if only one or less detections are left
             return detection_list
-        filtered_detections = self.merge_detections(detection_list[1:])
-        similiar_index = []
+        filtered_detections = self.merge_detections(detection_list[1:]) # Call itself without first element
+        # Detect all elements in the merged list (which does not contain the first element) which
+        # are very close to the first element.
+        similiar_index = [] # List containing indexes of detection which are close to the first element
         for i, detection in enumerate(filtered_detections):
             if np.linalg.norm(detection_list[0] - detection) < self.distance_threshold:
                 similiar_index.append(i)
+        # create list with all similiar detection
         similiar_values = [detec for i, detec in enumerate(filtered_detections) if i in similiar_index]
+        # add the first value to this list and calculate the average
         similiar_values.append(detection_list[0])
         detection_list[0] = np.mean(similiar_values, axis=0)
-        #detections = [
-        #    detection for detection in filtered_detections if (detection not in similiar_values)
-        #    ]
+        # Return a list containing all non close detection and the average detection of the close detections
         detections = [detec for i, detec in enumerate(filtered_detections) if i not in similiar_index]
         detections.append(detection_list[0])
         return detections
@@ -123,20 +134,14 @@ class DetectionMaker:
                 if s_1 == 0.0 and s_2 == 0.0: # Usually happens when one camera sees the same object twice
                     continue
                 # Mit s_1 und s_2 dreidimsensionale "Schnittpunkte" der Spots berechnen
-                #p_1 = np.dot(trans_2d_to_3d, spot_1_2d.get_point(s_1))
-                #p_2 = np.dot(trans_2d_to_3d, spot_2_2d.get_point(s_2))
                 p_1 = spot_1.get_point(s_1) # todo so richtig ??? -> weiter testen !
                 p_2 = spot_2.get_point(s_2)
-                #print(p_1)
-                #print(p_2)
                 # Distanz zwischen den Schnittpunkten berechnen
                 # Wenn Distanz unter bestimmten Schwellwert, Mittelpunkt zwischen Schnittpunkten in Liste eintragen
                 if np.linalg.norm(p_1 - p_2) <= self.distance_threshold:
                     #print(f"Spotted between {spot_1.camera_name} and {spot_2.camera_name}")
                     detection_list.append((p_1 + p_2) / 2)
-        # Für Alle Schnittpunkte mit jedem Schnittpunkt
-        #   Wenn anderer Schnittpunkt sehr nahe an eigenem Schnittpunkt:
-        #       Zusammenführen
+        # "Doppelte" Schnittpunkte zusammenführen
         detection_list = self.merge_detections(detection_list)
         return detection_list
 

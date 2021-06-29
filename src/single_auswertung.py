@@ -1,3 +1,8 @@
+"""This module represents the detection of drones in single images.
+
+It therefore represents the middle step in the detection pipeline. The class Spot
+represents one detection of one drone in one image and the class BildAuswertung
+does the whole detection procedure."""
 import time
 from threading import Thread
 
@@ -13,6 +18,13 @@ from yolov5.utils.general import check_img_size
 
 
 class Spot:
+    """Class representing one drone detection in one image.
+    
+    The detection is represented by the position of the microcontroller (base_pos) and the direction
+    the drone was spotted from microcontroller (drone_vec). This class also contains the name of
+    the microcontroller which spotted the drone, the size of the drone (0=no drone; 1=drone is filling
+    the whole screen) and the approximate time the single detection was made (single_time).
+    """
 
     def __init__(self, camera_name, base_pos, drone_vec, size, single_time) -> None:
         self.camera_name = camera_name
@@ -33,19 +45,30 @@ class Spot:
         return self._drone_vec
 
     def copy(self, base_pos=None, drone_vec=None):
+        """Returns a copy of itself.
+        
+        If a new base_pos and drone_vec is given, the copy has these values instead of
+        the values from itself.
+        """
         if base_pos is None or drone_vec is None:
             base_pos = self.base_pos
             drone_vec = self.drone_vec
         return Spot(self.camera_name, base_pos, drone_vec, self.size, self.single_time)
 
     def get_2d(self, trans: np.ndarray):
-        #base_pos = np.dot(trans, self.base_pos)
-        #drone_vec = np.dot(trans, self.drone_vec)
+        """Returns a 2d version of itself based on the given transformation matrix.
+        """
         base_pos = np.dot(trans, self.base_pos)
         drone_vec = np.dot(trans, self.drone_vec)
         return self.copy(base_pos=base_pos, drone_vec=drone_vec)
 
     def get_point(self, s):
+        """Returns a point on itself.
+        
+        In this case, a Spot is seen as a straight line in space. base_vec is the support vector
+        and drone_vec is the direction vector. The return value of this function is equal to:
+        return = base_vec + s * drone_vec
+        """
         return self.base_pos + s * self.drone_vec
 
     @property
@@ -60,46 +83,27 @@ class BildAuswertung:
     def __init__(self, conf: float, use_scissors=False) -> None:
         """Initializes a BildAuswertung object.
 
-        This usually includes initializing a Net (darknet) object with yolo data, which takes a while (~2s).
+        This usually includes initializing a model from pytorch with yolo data, which takes a while (~2s).
+        conf (confidence) is the threshhold value required for detection. If conf is 0.3, the system will only
+        use detection where its more or exactly 30% sure that it detected a drone.
+        use_scissors tries to detect scissors instead of drones, which is useful for debugging.
         """
         if use_scissors:
-        #self.yolov5_model = attempt_load(weight_path)
             self.model = torch.hub.load("ultralytics/yolov5", "custom", path="/home/max/Documents/drone_detection/yolov5m.pt")
         else:
             self.model = torch.hub.load("ultralytics/yolov5", "custom", path="/home/max/Documents/drone_detection/yolov5m_drones.pt")
         self.model.conf = conf
         self.device = select_device('0')
         self.scissors = use_scissors
-        #self.model = attempt_load(weight_path, map_location=self.device, inplace=True)
-        #self.model.eval()
-        #self.stride = int(self.model.stride.max())
-        #imgsz = 640
-        #if self.device.type != 'cpu':
-        #    self.model(torch.zeros(1, 3, imgsz, imgsz).to(self.device).type_as(next(self.model.parameters())))
-
-        #self.darknet = Net("/home/max/darknet_test/darknet/libdarknet.so",
-        #                   "/home/max/darknet_test/darknet/yolov3.weights",
-        #                   "/home/max/darknet_test/darknet/cfg/yolov3.cfg",
-        #                   "/home/max/darknet_test/darknet/cfg/coco.data")
 
     def detect_yolov5(self, image):
-        #image = np.moveaxis(image, (0, 1, 2), (1, 2, 0))
-        #image = np.array([image])
-        
-        #img = torch.from_numpy(image).to(self.device)
-        #img = img.float()
-        #img /= 255.0
-        #if img.ndimension() == 3:
-        #    img = img.unsqueeze(0)
+        """Use the yolov5 model to make detections."""
         results = self.model(image)
         return results.xyxy[0].cpu().numpy()[:,:]
 
     @staticmethod
     def draw_bounding_box(image, x1, y1, x2, y2, c):
-        #print(f"x: {x}, y: {y}, w: {w}, h: {h}")
-        #w_half = int(w / 2)
-        #h_half = int(h / 2)
-        #cv2.rectangle(image,(x-w_half,y-h_half),(x+w_half,y+h_half),(255,0,0),2)
+        """Draws a bounding box with the diagonal corners (x1, y1) and (x2, y2) and the confidence c."""
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(image, str(c), (x1, y2), font, 1, (255, 0, 0), thickness=2)
         cv2.rectangle(image,(x1,y1),(x2,y2),(255,0,0),2)
@@ -122,12 +126,13 @@ class BildAuswertung:
         # Iterate over all images
         for key in image_dict:
             spotted_list = self.detect_yolov5(image_dict[key].image)
-            # Iterate over found images      
+            # Iterate over detection made in images   
             for raw_spot in spotted_list:
-                #if raw_spot[5] in [0, 4]: # drone/person, airplane and not scissors (76)
                 if self.scissors and raw_spot[5] in [4, 76] or not self.scissors and raw_spot[5] in [0, 4]:
+                    # Transform the raw spot (pixelcoordinates on an image) into a more usable
+                    # base_pos + drone_vec form
                     height, width, _ = np.shape(image_dict[key].image)
-                    base_pos = image_dict[key].pos
+                    base_pos = image_dict[key].pos # base_pos is simply position of microcontroller
                     single_time = image_dict[key].timestamp
                     esp_name = image_dict[key].esp_name
                     x1, y1 = (int(a)for a in raw_spot[:2])
@@ -136,23 +141,15 @@ class BildAuswertung:
                     # draw bounding box
                     self.draw_bounding_box(image_dict[key].image, x1, y1, x2, y2, raw_spot[4])
                     # Transform pixel coordinates into 3d direction vector
-                    # todo where exactly is top and bottom ?
-                    geka_x = 0.5 # Gegenkathete
-                    geka_y = 0.38
+                    geka_x = 0.5 # Gegenkathete x
+                    geka_y = 0.38 # Gegenkathete y
+                    # Calculating a "ray" which gets shot through the screen of the camera to the spotted object
                     drone_vec = np.array([((x1+x2)/(2*width) - 0.5) * geka_x * 2, ((y1+y2)/(2*height) - 0.5) * -geka_y * 2, 1])
                     size = np.average(np.array(raw_spot[2:4])/np.array((height, width)))
                     spot = Spot(esp_name, base_pos, drone_vec, size, single_time)
                     spot_list.append(spot)
         return spot_list, image_dict
         
-
-    #def get_spotted(self):
-    #    return self.get_spotted_dummy()
-
-
-
-
-
 
 def main():
     dummy_img = cv2.imread("/home/max/darknet_test/darknet/data/dog.jpg")
