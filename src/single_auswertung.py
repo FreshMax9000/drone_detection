@@ -10,11 +10,7 @@ import numpy as np
 import cv2
 import torch
 
-from .darknet import Net
 from .image_data import ImageData
-from yolov5.models.experimental import attempt_load
-from yolov5.utils.torch_utils import select_device
-from yolov5.utils.general import check_img_size
 
 
 class Spot:
@@ -93,7 +89,6 @@ class BildAuswertung:
         else:
             self.model = torch.hub.load("ultralytics/yolov5", "custom", path="/home/max/Documents/drone_detection/yolov5m_drones.pt")
         self.model.conf = conf
-        self.device = select_device('0')
         self.scissors = use_scissors
 
     def detect_yolov5(self, image):
